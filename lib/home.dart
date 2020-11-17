@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:weather_app/country_model.dart';
-import 'package:weather_app/location_weather.dart';
+import 'package:weather_app/weather_details.dart';
+import 'api_service.dart';
+import 'models/location_model.dart';
+import 'models/location_weather.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -10,116 +11,74 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   TextEditingController _controller = new TextEditingController();
+  ApiService _api = new ApiService();
 
-  Future<List<Country>> _fetchCountry;
-  Future<LocationWeather> _fetchWeather;
+  // List<Location> _getLocation;
+  Future<List<Location>> _getLocation;
+  Future<LocationWeather> _getWeather;
   LocationWeather _locationWeather;
+
+  void searchLocation() {
+    setState(() {
+      _getLocation = _api.fetchLocation(_controller.text);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: Colors.grey[800],
-      appBar: AppBar(
-        title: Text('Weather App'),
-      ),
+      appBar: AppBar(title: Text('Weather App')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
-            children: [
+            children: <Widget>[
               TextField(
                 controller: _controller,
                 decoration: InputDecoration(
                   hintText: 'Enter a location...',
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15.0),
+                  ),
                 ),
               ),
               SizedBox(height: 20),
               if (_locationWeather != null) ...[
-                Text(
-                  _locationWeather.title,
-                  style: Theme.of(context).textTheme.headline4,
-                ),
-                Text(
-                  _locationWeather.consolidatedWeather.first.weatherStateName,
-                  style: Theme.of(context).textTheme.headline2,
-                ),
-                SizedBox(height: 15),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      children: [
-                        Text('Max'),
-                        Text(
-                          _locationWeather.consolidatedWeather.first.maxTemp
-                              .round()
-                              .toString(),
-                          style: Theme.of(context).textTheme.bodyText1,
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        Text('Min'),
-                        Text(
-                          _locationWeather.consolidatedWeather.first.minTemp
-                              .round()
-                              .toString(),
-                          style: Theme.of(context).textTheme.bodyText1,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                WeatherDetails(locationWeather: _locationWeather),
               ],
-              // FutureBuilder(
-              //     future: _fetchWeather,
-              //     builder: (context, snapshot) {
-              //       if (snapshot.connectionState == ConnectionState.waiting) {
-              //         return Center(child: CircularProgressIndicator());
-              //       }
-              //       final country = snapshot.data;
-              //       return Text(country.title);
-              //     }),
-              if (_locationWeather == null)
-                FutureBuilder(
-                    future: _fetchWeather,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-                      return Text('Could not get location');
-                    }),
               SizedBox(height: 20),
-              FutureBuilder(
-                future: _fetchCountry,
+              FutureBuilder<List<Location>>(
+                future: _getLocation,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot?.data == null) {
-                    return Center(child: Text('Search a location'));
-                  }
                   if (snapshot.hasError) {
-                    return Center(child: Text('Location not found'));
+                    return Center(
+                        child: Text('Error while fetching location(s)'));
+                  } else if (snapshot?.data == null) {
+                    return Center(child: Text('Error fetching location(s)'));
                   }
-
                   return Column(
-                    children: [
-                      Text('Select a country',
-                          style: Theme.of(context).textTheme.headline5),
-                      for (var country in snapshot.data)
-                        SizedBox(
+                    children: <Widget>[
+                      Text(
+                        'Select a country',
+                        style: Theme.of(context).textTheme.headline5,
+                      ),
+                      for (var location in snapshot.data)
+                        Container(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {
-                              fetchWeather(country.woeid.toString())
+                              _api
+                                  .fetchWeather(location.woeid.toString())
                                   .then((value) {
                                 setState(() {
                                   _locationWeather = value;
                                 });
                               });
                             },
-                            child: Text(country.title),
+                            child: Text(location.title),
                           ),
                         ),
                     ],
@@ -131,37 +90,9 @@ class _HomeState extends State<Home> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _fetchCountry = fetchLocation(_controller.text);
-          });
-        },
+        onPressed: () => searchLocation(),
         child: Icon(Icons.search_rounded),
       ),
     );
-  }
-}
-
-Future<List<Country>> fetchLocation(String location) async {
-  final response = await http
-      .get('https://www.metaweather.com/api/location/search/?query=$location');
-
-  if (response.statusCode == 200) {
-    // return countryFromJson(jsonDecode(response.body));
-    return countryFromJson(response.body);
-  } else {
-    throw Exception('Could not fetch weather for $location');
-  }
-}
-
-Future<LocationWeather> fetchWeather(String woeId) async {
-  final response =
-      await http.get('https://www.metaweather.com/api/location/$woeId');
-
-  if (response.statusCode == 200) {
-    // return countryFromJson(jsonDecode(response.body));
-    return locationWeatherFromJson(response.body);
-  } else {
-    throw Exception('Could not fetch weather');
   }
 }

@@ -4,14 +4,14 @@
 
 import 'dart:convert';
 
-List<Country> countryFromJson(String str) =>
-    List<Country>.from(json.decode(str).map((x) => Country.fromJson(x)));
+List<Location> locationFromJson(String str) =>
+    List<Location>.from(json.decode(str).map((x) => Location.fromJson(x)));
 
-String countryToJson(List<Country> data) =>
+String countryToJson(List<Location> data) =>
     json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
 
-class Country {
-  Country({
+class Location {
+  Location({
     this.title,
     this.locationType,
     this.woeid,
@@ -23,7 +23,7 @@ class Country {
   int woeid;
   String lattLong;
 
-  factory Country.fromJson(Map<String, dynamic> json) => Country(
+  factory Location.fromJson(Map<String, dynamic> json) => Location(
         title: json["title"],
         locationType: json["location_type"],
         woeid: json["woeid"],
