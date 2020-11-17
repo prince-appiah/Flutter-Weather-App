@@ -13,14 +13,21 @@ class _HomeState extends State<Home> {
   TextEditingController _controller = new TextEditingController();
   ApiService _api = new ApiService();
 
-  // List<Location> _getLocation;
   Future<List<Location>> _getLocation;
-  Future<LocationWeather> _getWeather;
+  // Future<LocationWeather> _getWeather;
   LocationWeather _locationWeather;
 
   void searchLocation() {
     setState(() {
       _getLocation = _api.fetchLocation(_controller.text);
+    });
+  }
+
+  void getWeather(int woeid) {
+    _api.fetchWeather(woeid.toString()).then((value) {
+      setState(() {
+        _locationWeather = value;
+      });
     });
   }
 
@@ -46,6 +53,8 @@ class _HomeState extends State<Home> {
                 ),
               ),
               SizedBox(height: 20),
+
+              // TODO: Navigate to new screen when a user taps on any list item
               if (_locationWeather != null) ...[
                 WeatherDetails(locationWeather: _locationWeather),
               ],
@@ -67,17 +76,11 @@ class _HomeState extends State<Home> {
                       ),
                       for (var location in snapshot.data)
                         Container(
+                          margin: EdgeInsets.symmetric(vertical: 5),
+                          height: 50,
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              _api
-                                  .fetchWeather(location.woeid.toString())
-                                  .then((value) {
-                                setState(() {
-                                  _locationWeather = value;
-                                });
-                              });
-                            },
+                            onPressed: () => getWeather(location.woeid),
                             child: Text(location.title),
                           ),
                         ),
